@@ -56,7 +56,7 @@ my %ignore_type = ();
 my @ignore = ();
 my $help = 0;
 my $configuration_file = ".checkpatch.conf";
-my $max_line_length = 100;
+my $max_line_length = 80;
 my $ignore_perl_version = 0;
 my $minimum_perl_version = 5.10.0;
 my $min_conf_desc_length = 4;
@@ -909,8 +909,6 @@ if (open(my $spelling, '<', $spelling_file)) {
 		$spelling_fix{$suspect} = $fix;
 	}
 	close($spelling);
-} else {
-	warn "No typos will be found - file '$spelling_file': $!\n";
 }
 
 if ($codespell) {
@@ -968,8 +966,7 @@ sub read_words {
 
 my $const_structs;
 if (show_type("CONST_STRUCT")) {
-	read_words(\$const_structs, $conststructsfile)
-	    or warn "No structs that should be const will be found - file '$conststructsfile': $!\n";
+	read_words(\$const_structs, $conststructsfile);
 }
 
 if (defined($typedefsfile)) {
@@ -3179,7 +3176,7 @@ sub process {
 					# A Fixes: or Link: line or signature tag line
 		      $commit_log_possible_stack_dump)) {
 			WARN("COMMIT_LOG_LONG_LINE",
-			     "Possible unwrapped commit description (prefer a maximum 75 chars per line)\n" . $herecurr);
+			     "Possible unwrapped commit description (prefer a maximum 80 chars per line)\n" . $herecurr);
 			$commit_log_long_line = 1;
 		}
 
@@ -3634,8 +3631,6 @@ sub process {
 
 				if ($comment !~ /^$/ &&
 				    $rawline !~ m@^\+\Q$comment\E SPDX-License-Identifier: @) {
-					WARN("SPDX_LICENSE_TAG",
-					     "Missing or malformed SPDX-License-Identifier tag in line $checklicenseline\n" . $herecurr);
 				} elsif ($rawline =~ /(SPDX-License-Identifier: .*)/) {
 					my $spdx_license = $1;
 					if (!is_SPDX_License_valid($spdx_license)) {
@@ -3689,53 +3684,9 @@ sub process {
 #
 # if LONG_LINE is ignored, the other 2 types are also ignored
 #
-
 		if ($line =~ /^\+/ && $length > $max_line_length) {
-			my $msg_type = "LONG_LINE";
-
-			# Check the allowed long line types first
-
-			# logging functions that end in a string that starts
-			# before $max_line_length
-			if ($line =~ /^\+\s*$logFunctions\s*\(\s*(?:(?:KERN_\S+\s*|[^"]*))?($String\s*(?:|,|\)\s*;)\s*)$/ &&
-			    length(expand_tabs(substr($line, 1, length($line) - length($1) - 1))) <= $max_line_length) {
-				$msg_type = "";
-
-			# lines with only strings (w/ possible termination)
-			# #defines with only strings
-			} elsif ($line =~ /^\+\s*$String\s*(?:\s*|,|\)\s*;)\s*$/ ||
-				 $line =~ /^\+\s*#\s*define\s+\w+\s+$String$/) {
-				$msg_type = "";
-
-			# More special cases
-			} elsif ($line =~ /^\+.*\bEFI_GUID\s*\(/ ||
-				 $line =~ /^\+\s*(?:\w+)?\s*DEFINE_PER_CPU/) {
-				$msg_type = "";
-
-			# URL ($rawline is used in case the URL is in a comment)
-			} elsif ($rawline =~ /^\+.*\b[a-z][\w\.\+\-]*:\/\/\S+/i) {
-				$msg_type = "";
-
-			# Otherwise set the alternate message types
-
-			# a comment starts before $max_line_length
-			} elsif ($line =~ /($;[\s$;]*)$/ &&
-				 length(expand_tabs(substr($line, 1, length($line) - length($1) - 1))) <= $max_line_length) {
-				$msg_type = "LONG_LINE_COMMENT"
-
-			# a quoted string starts before $max_line_length
-			} elsif ($sline =~ /\s*($String(?:\s*(?:\\|,\s*|\)\s*;\s*))?)$/ &&
-				 length(expand_tabs(substr($line, 1, length($line) - length($1) - 1))) <= $max_line_length) {
-				$msg_type = "LONG_LINE_STRING"
-			}
-
-			if ($msg_type ne "" &&
-			    (show_type("LONG_LINE") || show_type($msg_type))) {
-				my $msg_level = \&WARN;
-				$msg_level = \&CHK if ($file);
-				&{$msg_level}($msg_type,
+			WARN("LONG_LINE",
 					      "line length of $length exceeds $max_line_length columns\n" . $herecurr);
-			}
 		}
 
 # check for adding lines without a newline.
@@ -3756,32 +3707,6 @@ sub process {
 
 # check we are in a valid source file C or perl if not then ignore this hunk
 		next if ($realfile !~ /\.(h|c|pl|dtsi|dts)$/);
-
-# at the beginning of a line any tabs must come first and anything
-# more than $tabsize must use tabs.
-		if ($rawline =~ /^\+\s* \t\s*\S/ ||
-		    $rawline =~ /^\+\s*        \s*/) {
-			my $herevet = "$here\n" . cat_vet($rawline) . "\n";
-			$rpt_cleaners = 1;
-			if (ERROR("CODE_INDENT",
-				  "code indent should use tabs where possible\n" . $herevet) &&
-			    $fix) {
-				$fixed[$fixlinenr] =~ s/^\+([ \t]+)/"\+" . tabify($1)/e;
-			}
-		}
-
-# check for space before tabs.
-		if ($rawline =~ /^\+/ && $rawline =~ / \t/) {
-			my $herevet = "$here\n" . cat_vet($rawline) . "\n";
-			if (WARN("SPACE_BEFORE_TAB",
-				"please, no space before tabs\n" . $herevet) &&
-			    $fix) {
-				while ($fixed[$fixlinenr] =~
-					   s/(^\+.*) {$tabsize,$tabsize}\t/$1\t\t/) {}
-				while ($fixed[$fixlinenr] =~
-					   s/(^\+.*) +\t/$1\t/) {}
-			}
-		}
 
 # check for assignments on the start of a line
 		if ($sline =~ /^\+\s+($Assignment)[^=]/) {
@@ -4001,18 +3926,11 @@ sub process {
 			}
 		}
 
-# check for spaces at the beginning of a line.
-# Exceptions:
-#  1) within comments
-#  2) indented preprocessor commands
-#  3) hanging labels
-		if ($rawline =~ /^\+ / && $line !~ /^\+ *(?:$;|#|$Ident:)/)  {
+# check for tabs at the beginning of a line.
+		if ($rawline =~ /^\+\t/ && $line !~ /^\+\t*(?:$;|#|$Ident:)/)  {
 			my $herevet = "$here\n" . cat_vet($rawline) . "\n";
-			if (WARN("LEADING_SPACE",
-				 "please, no spaces at the start of a line\n" . $herevet) &&
-			    $fix) {
-				$fixed[$fixlinenr] =~ s/^\+([ \t]+)/"\+" . tabify($1)/e;
-			}
+			(WARN("LEADING_SPACE",
+				"please, no tabs at the start of a line\n" . $herevet));
 		}
 
 # check we are in a valid C source file if not then ignore this hunk
@@ -4315,15 +4233,6 @@ sub process {
 
 			#print "line<$line> prevline<$prevline> indent<$indent> sindent<$sindent> check<$check> continuation<$continuation> s<$s> cond_lines<$cond_lines> stat_real<$stat_real> stat<$stat>\n";
 
-			if ($check && $s ne '' &&
-			    (($sindent % $tabsize) != 0 ||
-			     ($sindent < $indent) ||
-			     ($sindent == $indent &&
-			      ($s !~ /^\s*(?:\}|\{|else\b)/)) ||
-			     ($sindent > $indent + $tabsize))) {
-				WARN("SUSPECT_CODE_INDENT",
-				     "suspect code indent for conditional statements ($indent, $sindent)\n" . $herecurr . "$stat_real\n");
-			}
 		}
 
 		# Track the 'values' across context and added lines.
@@ -4559,15 +4468,6 @@ sub process {
 				$herecurr);
 		}
 
-# check for initialized const char arrays that should be static const
-		if ($line =~ /^\+\s*const\s+(char|unsigned\s+char|_*u8|(?:[us]_)?int8_t)\s+\w+\s*\[\s*(?:\w+\s*)?\]\s*=\s*"/) {
-			if (WARN("STATIC_CONST_CHAR_ARRAY",
-				 "const array should probably be static const\n" . $herecurr) &&
-			    $fix) {
-				$fixed[$fixlinenr] =~ s/(^.\s*)const\b/${1}static const/;
-			}
-		}
-
 # check for static char foo[] = "bar" declarations.
 		if ($line =~ /\bstatic\s+char\s+(\w+)\s*\[\s*\]\s*=\s*"/) {
 			WARN("STATIC_CONST_CHAR_ARRAY",
@@ -4599,13 +4499,6 @@ sub process {
 			}
 		}
 
-# check for non-global char *foo[] = {"bar", ...} declarations.
-		if ($line =~ /^.\s+(?:static\s+|const\s+)?char\s+\*\s*\w+\s*\[\s*\]\s*=\s*\{/) {
-			WARN("STATIC_CONST_CHAR_ARRAY",
-			     "char * array declaration might be better as static const\n" .
-				$herecurr);
-		}
-
 # check for sizeof(foo)/sizeof(foo[0]) that could be ARRAY_SIZE(foo)
 		if ($line =~ m@\bsizeof\s*\(\s*($Lval)\s*\)@) {
 			my $array = $1;
@@ -4626,17 +4519,6 @@ sub process {
 			    $fix) {
 				$fixed[$fixlinenr] =~ s/(\b($Type)\s+($Ident))\s*\(\s*\)/$2 $3(void)/;
 			}
-		}
-
-# check for new typedefs, only function parameters and sparse annotations
-# make sense.
-		if ($line =~ /\btypedef\s/ &&
-		    $line !~ /\btypedef\s+$Type\s*\(\s*\*?$Ident\s*\)\s*\(/ &&
-		    $line !~ /\btypedef\s+$Type\s+$Ident\s*\(/ &&
-		    $line !~ /\b$typeTypedefs\b/ &&
-		    $line !~ /\b__bitwise\b/) {
-			WARN("NEW_TYPEDEFS",
-			     "do not add new typedefs\n" . $herecurr);
 		}
 
 # * goes on variable not on type
@@ -4927,6 +4809,7 @@ sub process {
 			# if there is a space between the name and the open
 			# parenthesis it is simply not a parameter group.
 			} elsif ($ctx_before =~ /^.\s*\#\s*define\s*$/) {
+			} elsif ($ctx =~ /^.\s*\#\s*if defined\s*$/) {
 
 			# cpp #elif statement condition may start with a (
 			} elsif ($ctx =~ /^.\s*\#\s*elif\s*$/) {
@@ -5179,15 +5062,6 @@ sub process {
 								$good = rtrim($fix_elements[$n]) . " " . trim($fix_elements[$n + 1]);
 								$line_fixed = 1;
 							}
-						}
-					} elsif ($ctx =~ /Wx[^WCE]|[^WCE]xW/) {
-						if (ERROR("SPACING",
-							  "need consistent spacing around '$op' $at\n" . $hereptr)) {
-							$good = rtrim($fix_elements[$n]) . " " . trim($fix_elements[$n + 1]) . " ";
-							if (defined $fix_elements[$n + 2]) {
-								$fix_elements[$n + 2] =~ s/^\s+//;
-							}
-							$line_fixed = 1;
 						}
 					}
 
@@ -5506,15 +5380,6 @@ sub process {
 			}
 		}
 
-# Return of what appears to be an errno should normally be negative
-		if ($sline =~ /\breturn(?:\s*\(+\s*|\s+)(E[A-Z]+)(?:\s*\)+\s*|\s*)[;:,]/) {
-			my $name = $1;
-			if ($name ne 'EOF' && $name ne 'ERROR' && $name !~ /^EPOLL/) {
-				WARN("USE_NEGATIVE_ERRNO",
-				     "return of an errno should typically be negative (ie: return -$1)\n" . $herecurr);
-			}
-		}
-
 # Need a space before open parenthesis after if, while etc
 		if ($line =~ /\b(if|while|for|switch)\(/) {
 			if (ERROR("SPACING",
@@ -5553,34 +5418,6 @@ sub process {
 		    $line =~ /\b(?:if|while|for)\s*\(/ && $line !~ /^.\s*#/) {
 			my ($s, $c) = ($stat, $cond);
 			my $fixed_assign_in_if = 0;
-
-			if ($c =~ /\bif\s*\(.*[^<>!=]=[^=].*/s) {
-				if (ERROR("ASSIGN_IN_IF",
-					  "do not use assignment in if condition\n" . $herecurr) &&
-				    $fix && $perl_version_ok) {
-					if ($rawline =~ /^\+(\s+)if\s*\(\s*(\!)?\s*\(\s*(($Lval)\s*=\s*$LvalOrFunc)\s*\)\s*(?:($Compare)\s*($FuncArg))?\s*\)\s*(\{)?\s*$/) {
-						my $space = $1;
-						my $not = $2;
-						my $statement = $3;
-						my $assigned = $4;
-						my $test = $8;
-						my $against = $9;
-						my $brace = $15;
-						fix_delete_line($fixlinenr, $rawline);
-						fix_insert_line($fixlinenr, "$space$statement;");
-						my $newline = "${space}if (";
-						$newline .= '!' if defined($not);
-						$newline .= '(' if (defined $not && defined($test) && defined($against));
-						$newline .= "$assigned";
-						$newline .= " $test $against" if (defined($test) && defined($against));
-						$newline .= ')' if (defined $not && defined($test) && defined($against));
-						$newline .= ')';
-						$newline .= " {" if (defined($brace));
-						fix_insert_line($fixlinenr + 1, $newline);
-						$fixed_assign_in_if = 1;
-					}
-				}
-			}
 
 			# Find out what is on the end of the line after the
 			# conditional.
@@ -5866,8 +5703,6 @@ sub process {
 					ERROR("MULTISTATEMENT_MACRO_USE_DO_WHILE",
 					      "Macros with multiple statements should be enclosed in a do - while loop\n" . "$herectx");
 				} else {
-					ERROR("COMPLEX_MACRO",
-					      "Macros with complex values should be enclosed in parentheses\n" . "$herectx");
 				}
 
 			}
@@ -5911,18 +5746,7 @@ sub process {
 				}
 			}
 
-# check for macros with flow control, but without ## concatenation
-# ## concatenation is commonly a macro that defines a function so ignore those
-			if ($has_flow_statement && !$has_arg_concat) {
-				my $cnt = statement_rawlines($ctx);
-				my $herectx = get_stat_here($linenr, $cnt, $here);
-
-				WARN("MACRO_WITH_FLOW_CONTROL",
-				     "Macros with flow control statements should be avoided\n" . "$herectx");
-			}
-
 # check for line continuations outside of #defines, preprocessor #, and asm
-
 		} else {
 			if ($prevline !~ /^..*\\$/ &&
 			    $line !~ /^\+\s*\#.*\\$/ &&		# preprocessor
@@ -6030,8 +5854,6 @@ sub process {
 						$sum_allowed += $_;
 					}
 					if ($sum_allowed == 0) {
-						WARN("BRACES",
-						     "braces {} are not necessary for any arm of this statement\n" . $herectx);
 					} elsif ($sum_allowed != $allow &&
 						 $seen != $allow) {
 						CHK("BRACES",
@@ -6082,19 +5904,40 @@ sub process {
 					$allowed = 1;
 				}
 			}
-			if ($level == 0 && $block =~ /^\s*\{/ && !$allowed) {
+
+			if ($level == 0 && $block =~ /\s*\(void\)\s[a-z_]+\;/) {
+				# allow (void) cast for unused.
+				$allowed = 1;
+			}
+
+			if ($level == 0 && $line =~ /#else/) {
+				$allowed = 1;
+			}
+
+			if ($level == 0 && $line =~ /#if defined/) {
+				$allowed = 1;
+			}
+
+			if ($level == 0 && $block !~ /^\s*\{/ && !$allowed) {
 				my $cnt = statement_rawlines($block);
 				my $herectx = get_stat_here($linenr, $cnt, $here);
 
 				WARN("BRACES",
-				     "braces {} are not necessary for single statement blocks\n" . $herectx);
+				     "braces {} are necessary for single statement blocks\n" . $herectx);
 			}
+		}
+
+# check for braces in single statement blocks
+		if ($sline =~ /^.\s*else$/ ||
+			$sline =~ /^.\s*else\sif\s\(.*\)$/) {
+			WARN("BRACES", "braces {} are necessary for single statement blocks\n" . $herecurr);
 		}
 
 # check for single line unbalanced braces
 		if ($sline =~ /^.\s*\}\s*else\s*$/ ||
+			$sline =~ /^.\s*else\sif\s\(.*\)\s\{$/ ||
 		    $sline =~ /^.\s*else\s*\{\s*$/) {
-			CHK("BRACES", "Unbalanced braces around else statement\n" . $herecurr);
+			WARN("BRACES", "Unbalanced braces around else statement\n" . $herecurr);
 		}
 
 # check for unnecessary blank lines around braces
@@ -6116,47 +5959,6 @@ sub process {
 # no volatiles please
 		my $asm_volatile = qr{\b(__asm__|asm)\s+(__volatile__|volatile)\b};
 		if ($line =~ /\bvolatile\b/ && $line !~ /$asm_volatile/) {
-			WARN("VOLATILE",
-			     "Use of volatile is usually wrong: see Documentation/process/volatile-considered-harmful.rst\n" . $herecurr);
-		}
-
-# Check for user-visible strings broken across lines, which breaks the ability
-# to grep for the string.  Make exceptions when the previous string ends in a
-# newline (multiple lines in one string constant) or '\t', '\r', ';', or '{'
-# (common in inline assembly) or is a octal \123 or hexadecimal \xaf value
-		if ($line =~ /^\+\s*$String/ &&
-		    $prevline =~ /"\s*$/ &&
-		    $prevrawline !~ /(?:\\(?:[ntr]|[0-7]{1,3}|x[0-9a-fA-F]{1,2})|;\s*|\{\s*)"\s*$/) {
-			if (WARN("SPLIT_STRING",
-				 "quoted string split across lines\n" . $hereprev) &&
-				     $fix &&
-				     $prevrawline =~ /^\+.*"\s*$/ &&
-				     $last_coalesced_string_linenr != $linenr - 1) {
-				my $extracted_string = get_quoted_string($line, $rawline);
-				my $comma_close = "";
-				if ($rawline =~ /\Q$extracted_string\E(\s*\)\s*;\s*$|\s*,\s*)/) {
-					$comma_close = $1;
-				}
-
-				fix_delete_line($fixlinenr - 1, $prevrawline);
-				fix_delete_line($fixlinenr, $rawline);
-				my $fixedline = $prevrawline;
-				$fixedline =~ s/"\s*$//;
-				$fixedline .= substr($extracted_string, 1) . trim($comma_close);
-				fix_insert_line($fixlinenr - 1, $fixedline);
-				$fixedline = $rawline;
-				$fixedline =~ s/\Q$extracted_string\E\Q$comma_close\E//;
-				if ($fixedline !~ /\+\s*$/) {
-					fix_insert_line($fixlinenr, $fixedline);
-				}
-				$last_coalesced_string_linenr = $linenr;
-			}
-		}
-
-# check for missing a space in a string concatenation
-		if ($prevrawline =~ /[^\\]\w"$/ && $rawline =~ /^\+[\t ]+"\w/) {
-			WARN('MISSING_SPACE',
-			     "break quoted strings at a space character\n" . $hereprev);
 		}
 
 # check for an embedded function name in a string when the function is known
@@ -6613,7 +6415,6 @@ sub process {
 				"copy"				=> "__copy",
 				"designated_init"		=> "__designated_init",
 				"externally_visible"		=> "__visible",
-				"format"			=> "printf|scanf",
 				"gnu_inline"			=> "__gnu_inline",
 				"malloc"			=> "__malloc",
 				"mode"				=> "__mode",
@@ -6621,7 +6422,6 @@ sub process {
 				"noclone"			=> "__noclone",
 				"noinline"			=> "noinline",
 				"nonstring"			=> "__nonstring",
-				"noreturn"			=> "__noreturn",
 				"packed"			=> "__packed",
 				"pure"				=> "__pure",
 				"section"			=> "__section",
@@ -6653,12 +6453,6 @@ sub process {
 						$fixed[$fixlinenr] =~ s/ __attribute__\s*\(\s*\(\s*\)\s*\)//;
 					}
 				}
-			}
-
-			# Check for __attribute__ unused, prefer __always_unused or __maybe_unused
-			if ($attr =~ /^_*unused/) {
-				WARN("PREFER_DEFINED_ATTRIBUTE_MACRO",
-				     "__always_unused or __maybe_unused is preferred over __attribute__((__unused__))\n" . $herecurr);
 			}
 		}
 
@@ -6856,12 +6650,6 @@ sub process {
 #			}
 #		}
 
-# strlcpy uses that should likely be strscpy
-		if ($line =~ /\bstrlcpy\s*\(/) {
-			WARN("STRLCPY",
-			     "Prefer strscpy over strlcpy - see: https://lore.kernel.org/r/CAHk-=wgfRnXz0W3D37d01q3JFkr_i_uTL=V6A6G1oUZcprmknw\@mail.gmail.com/\n" . $herecurr);
-		}
-
 # typecasts on min/max could be min_t/max_t
 		if ($perl_version_ok &&
 		    defined $stat &&
@@ -6942,35 +6730,6 @@ sub process {
 			    $fix) {
 				$fixed[$fixlinenr] =~ s/(.*)\bextern\b\s*(.*)/$1$2/;
 			}
-		}
-
-# check for new externs in .c files.
-		if ($realfile =~ /\.c$/ && defined $stat &&
-		    $stat =~ /^.\s*(?:extern\s+)?$Type\s+($Ident)(\s*)\(/s)
-		{
-			my $function_name = $1;
-			my $paren_space = $2;
-
-			my $s = $stat;
-			if (defined $cond) {
-				substr($s, 0, length($cond), '');
-			}
-			if ($s =~ /^\s*;/)
-			{
-				WARN("AVOID_EXTERNS",
-				     "externs should be avoided in .c files\n" .  $herecurr);
-			}
-
-			if ($paren_space =~ /\n/) {
-				WARN("FUNCTION_ARGUMENTS",
-				     "arguments for function declarations should follow identifier\n" . $herecurr);
-			}
-
-		} elsif ($realfile =~ /\.c$/ && defined $stat &&
-		    $stat =~ /^.\s*extern\s+/)
-		{
-			WARN("AVOID_EXTERNS",
-			     "externs should be avoided in .c files\n" .  $herecurr);
 		}
 
 # check for function declarations that have arguments without identifier names
@@ -7405,17 +7164,6 @@ sub process {
 						      "Exporting writable files is usually an error. Consider more restrictive permissions.\n" . "$here\n" . $stat_real);
 					}
 				}
-			}
-		}
-
-# check for uses of S_<PERMS> that could be octal for readability
-		while ($line =~ m{\b($multi_mode_perms_string_search)\b}g) {
-			my $oval = $1;
-			my $octal = perms_to_octal($oval);
-			if (WARN("SYMBOLIC_PERMS",
-				 "Symbolic permissions '$oval' are not preferred. Consider using octal permissions '$octal'.\n" . $herecurr) &&
-			    $fix) {
-				$fixed[$fixlinenr] =~ s/\Q$oval\E/$octal/;
 			}
 		}
 
