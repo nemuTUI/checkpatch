@@ -1318,12 +1318,6 @@ NOTE: perl $^V is not modern enough to detect all possible issues.
       An upgrade to at least perl $minimum_perl_version is suggested.
 EOM
 	}
-	if ($exit) {
-		print << "EOM"
-
-NOTE: If any of the errors are false positives, please report them to the maintainer.
-EOM
-	}
 }
 
 exit($exit);
@@ -7257,14 +7251,6 @@ sub process {
 	}
 
 	if ($quiet == 0) {
-		# If there were any defects found and not already fixing them
-		if (!$clean and !$fix) {
-			print << "EOM"
-
-NOTE: For some of the reported defects, checkpatch may be able to
-      mechanically convert to the typical style using --fix or --fix-inplace.
-EOM
-		}
 		# If there were whitespace errors which cleanpatch can fix
 		# then suggest that.
 		if ($rpt_cleaners) {
