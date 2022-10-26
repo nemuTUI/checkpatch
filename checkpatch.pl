@@ -1321,8 +1321,7 @@ EOM
 	if ($exit) {
 		print << "EOM"
 
-NOTE: If any of the errors are false positives, please report
-      them to the maintainer, see CHECKPATCH in MAINTAINERS.
+NOTE: If any of the errors are false positives, please report them to the maintainer.
 EOM
 	}
 }
