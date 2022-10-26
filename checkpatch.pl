@@ -3144,6 +3144,14 @@ sub process {
 			     "A patch subject line should describe the change not the tool that found it\n" . $herecurr);
 		}
 
+# Check for subject format: must be: feature: description
+		if ($in_header_lines && $line =~ /^Subject:/ ) {
+			if ($line !~ /^Subject:\s\[PATCH\]\s\w+:.*$/) {
+			WARN("EMAIL_SUBJECT",
+			     "A patch subject line should be in format: \"feature: description\"\n" . $herecurr);
+			}
+		}
+
 # Check for Gerrit Change-Ids not in any patch context
 		if ($realfile eq '' && !$has_patch_separator && $line =~ /^\s*change-id:/i) {
 			if (ERROR("GERRIT_CHANGE_ID",
