@@ -3130,13 +3130,6 @@ sub process {
 			}
 		}
 
-# Check email subject for common tools that don't need to be mentioned
-		if ($in_header_lines &&
-		    $line =~ /^Subject:.*\b(?:checkpatch|sparse|smatch)\b[^:]/i) {
-			WARN("EMAIL_SUBJECT",
-			     "A patch subject line should describe the change not the tool that found it\n" . $herecurr);
-		}
-
 # Check for subject format: must be: feature: description
 		if ($in_header_lines && $line =~ /^Subject:/ ) {
 			if ($line !~ /^Subject:\s\[PATCH\]\s\w+:.*$/) {
