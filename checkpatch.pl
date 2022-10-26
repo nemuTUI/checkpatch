@@ -26,7 +26,7 @@ my $quiet = 0;
 my $verbose = 0;
 my %verbose_messages = ();
 my %verbose_emitted = ();
-my $tree = 1;
+my $tree = 0;
 my $chk_signoff = 1;
 my $chk_patch = 1;
 my $tst_only;
