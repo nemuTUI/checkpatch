@@ -5900,6 +5900,10 @@ sub process {
 				$allowed = 1;
 			}
 
+			if ($level == 0 && $line =~ /#if !defined/) {
+				$allowed = 1;
+			}
+
 			if ($level == 0 && $block !~ /^\s*\{/ && !$allowed) {
 				my $cnt = statement_rawlines($block);
 				my $herectx = get_stat_here($linenr, $cnt, $here);
