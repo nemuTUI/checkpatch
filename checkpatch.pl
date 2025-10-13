@@ -6408,7 +6408,6 @@ sub process {
 				"noclone"			=> "__noclone",
 				"noinline"			=> "noinline",
 				"nonstring"			=> "__nonstring",
-				"packed"			=> "__packed",
 				"pure"				=> "__pure",
 				"section"			=> "__section",
 				"used"				=> "__used",
