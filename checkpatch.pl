@@ -5952,7 +5952,7 @@ sub process {
 # context providing the function name or a single line form for in-file
 # function declarations
 		if ($line =~ /^\+.*$String/ &&
-		    defined($context_function) &&
+		    defined($context_function) && length($context_function) > 4 &&
 		    get_quoted_string($line, $rawline) =~ /\b$context_function\b/ &&
 		    length(get_quoted_string($line, $rawline)) != (length($context_function) + 2)) {
 			WARN("EMBEDDED_FUNCTION_NAME",
